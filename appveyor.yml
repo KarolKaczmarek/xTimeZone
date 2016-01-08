@@ -2,6 +2,11 @@
 #      environment configuration  # 
 #---------------------------------# 
 version: 1.9.{build}.0
+
+environment:
+  powershellgallery_api_token:
+    secure: QFMDktDREWbxRj3h74Bud1xZI7FDti2aCIqwAj1l46RjPxH/tKOXp5+/IQVpXi9L
+
 install: 
   - cinst -y pester
   - git clone https://github.com/PowerShell/DscResource.Tests
@@ -36,8 +41,18 @@ test_script:
 # scripts to run before deployment 
 deploy_script: 
   - ps: |
+      # Publish to PowerShell Gallery
+      Write-Host "Publishing $env:APPVEYOR_PROJECT_NAME to PowerShellGallery"
+      $projectUri = "https://github.com/PowerShell/$env:APPVEYOR_PROJECT_NAME"
+      $licenseUri = "https://github.com/PowerShell/$env:APPVEYOR_PROJECT_NAME/blob/master/LICENSE"
+      $tag = 'DesiredStateConfiguration DSC DSCResourceKit'
+      Publish-Module -Name $env:APPVEYOR_PROJECT_NAME -ProjectUri $projectUri -LicenseUri $licenseUri -Tag $tag -NuGetApiKey $env:powershellgallery_api_token -verbose
+      
       # Creating project artifact
       $stagingDirectory = (Resolve-Path ..).Path
+      
+      Write-Host "TODO stagingDirectory = $stagingDirectory; projectUri = $projectUri; licenseUri = $licenseUri; tag = $tag; powershellgallery_api_token= $env:powershellgallery_api_token"
+      
       $manifest = Join-Path $pwd "xTimeZone.psd1"
       (Get-Content $manifest -Raw).Replace("1.9.0.0", $env:APPVEYOR_BUILD_VERSION) | Out-File $manifest
       $zipFilePath = Join-Path $stagingDirectory "$(Split-Path $pwd -Leaf).zip"
@@ -58,7 +73,6 @@ deploy_script:
           Write-Host "Pushing package $_ as Appveyor artifact"
           Push-AppveyorArtifact $_
         }
-        
         
 
 
